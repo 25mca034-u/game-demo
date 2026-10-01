@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f2e9">
+  <meta name="description" content="A quick, colorful arcade driving game. Dodge traffic and chase your best score.">
+  <title>Lane Runner - Arcade Racer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      color-scheme: light;
+      --paper: #f5f2e9;
+      --ink: #202522;
+      --muted: #6e756f;
+      --line: #d9d7ce;
+      --red: #ee563d;
+      --teal: #168777;
+      --yellow: #f3c647;
+      --mono: "DM Mono", monospace;
+      --display: "Barlow Condensed", Impact, sans-serif;
+      --body: "Manrope", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#b9b7ac 0.65px, transparent 0.65px);
+      background-size: 9px 9px;
+      font-family: var(--body);
+    }
+    button { font: inherit; }
+    .page { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 24px; }
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 13px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font: 11px var(--mono);
+      text-transform: uppercase;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; color: var(--ink); }
+    .brand-mark { width: 11px; height: 11px; background: var(--red); transform: rotate(45deg); }
+    .intro { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding: 22px 0 17px; }
+    h1 { margin: 0; font: 800 clamp(42px, 7vw, 68px)/0.88 var(--display); text-transform: uppercase; }
+    h1 span { color: var(--red); }
+    .intro-note { max-width: 220px; margin: 0 0 3px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .game-shell { overflow: hidden; border: 1px solid #292f2b; background: #26322f; box-shadow: 7px 7px 0 #d8d4c9; }
+    .hud {
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      align-items: center;
+      padding: 8px 17px;
+      color: #f5f2e9;
+      background: #202522;
+      border-bottom: 1px solid #47504a;
+    }
+    .readout { display: flex; flex-direction: column; gap: 2px; }
+    .readout-label { color: #a3aca3; font: 9px var(--mono); text-transform: uppercase; }
+    .readout-value { font: 700 20px/1 var(--display); }
+    .readout-value small { color: #abb1a7; font: 10px var(--mono); }
+    .lives { display: flex; gap: 5px; align-items: center; }
+    .life { color: var(--red); font-size: 15px; transition: opacity 180ms ease; }
+    .life.lost { opacity: 0.23; }
+    .hud-actions { display: flex; gap: 7px; }
+    .icon-button {
+      width: 35px;
+      height: 35px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #536059;
+      border-radius: 2px;
+      color: #f5f2e9;
+      background: transparent;
+      cursor: pointer;
+      font-size: 15px;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+    .icon-button:hover { background: #35413b; border-color: #9ca69b; }
+    .icon-button:focus-visible, .touch-button:focus-visible, .start-button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+    .track-wrap { position: relative; width: 100%; aspect-ratio: 900 / 560; background: #a9c6ac; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgb(23 32 29 / 56%);
+      transition: opacity 180ms ease, visibility 180ms ease;
+    }
+    .overlay.hidden { visibility: hidden; opacity: 0; pointer-events: none; }
+    .overlay-panel { width: min(330px, 100%); padding: 22px 24px; text-align: center; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); box-shadow: 5px 5px 0 var(--red); }
+    .overlay-kicker { margin: 0 0 4px; color: var(--teal); font: 10px var(--mono); text-transform: uppercase; }
+    .overlay h2 { margin: 0; font: 800 38px/1 var(--display); text-transform: uppercase; }
+    .overlay-copy { margin: 9px 0 17px; color: #545b55; font-size: 12px; line-height: 1.55; }
+    .start-button { min-height: 42px; padding: 0 21px; border: 0; border-radius: 1px; color: white; background: var(--red); cursor: pointer; font: 700 12px var(--mono); text-transform: uppercase; transition: background 140ms ease, transform 140ms ease; }
+    .start-button:hover { background: #d84530; transform: translateY(-1px); }
+    .below-game { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 13px; }
+    .instructions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: var(--muted); font-size: 11px; }
+    .key { display: inline-grid; min-width: 23px; height: 22px; place-items: center; margin-right: 4px; padding: 0 5px; border: 1px solid #c9c7bd; border-bottom-width: 2px; border-radius: 2px; color: var(--ink); background: #fbfaf5; font: 10px var(--mono); }
+    .touch-controls { display: none; gap: 8px; }
+    .touch-button { width: 56px; height: 43px; border: 1px solid #b9b7ac; border-radius: 2px; color: var(--ink); background: #fbfaf5; cursor: pointer; font-size: 18px; touch-action: manipulation; }
+    .footer { display: flex; justify-content: space-between; gap: 12px; padding-top: 22px; color: #8a8c82; font: 9px var(--mono); text-transform: uppercase; }
+    .footer strong { color: var(--teal); font-weight: 500; }
+    @media (max-width: 600px) {
+      .page { width: min(100% - 22px, 500px); padding-top: 16px; }
+      .intro { align-items: start; flex-direction: column; gap: 8px; padding-top: 19px; }
+      .intro-note { max-width: 300px; }
+      .hud { padding: 8px 10px; }
+      .readout-value { font-size: 18px; }
+      .hud-actions { gap: 4px; }
+      .icon-button { width: 31px; height: 33px; }
+      .below-game { align-items: flex-end; }
+      .instructions { max-width: 195px; gap: 6px; font-size: 10px; }
+      .touch-controls { display: flex; }
+      .footer { font-size: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topline">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>Side Street Arcade</span></div>
+      <span>Game 01 / Endless Run</span>
+    </div>
+    <section class="intro" aria-label="Game introduction">
+      <h1>Lane <span>Runner</span></h1>
+      <p class="intro-note">Find the gaps. Keep your nerve. How far can you make it?</p>
+    </section>
+    <section class="game-shell" aria-label="Lane Runner game">
+      <div class="hud">
+        <div class="readout"><span class="readout-label">Distance</span><span class="readout-value"><span id="score">00000</span> <small>m</small></span></div>
+        <div class="readout"><span class="readout-label">Best run</span><span class="readout-value"><span id="best">00000</span> <small>m</small></span></div>
+        <div class="readout"><span class="readout-label">Condition</span><span class="lives" id="lives" aria-label="3 lives"><span class="life">◆</span><span class="life">◆</span><span class="life">◆</span></span></div>
+        <div class="hud-actions">
+          <button class="icon-button" id="pause-button" type="button" aria-label="Pause game" title="Pause (P)">Ⅱ</button>
+          <button class="icon-button" id="restart-button" type="button" aria-label="Restart game" title="Restart (R)">↻</button>
+        </div>
+      </div>
+      <div class="track-wrap">
+        <canvas id="game" width="900" height="560" aria-label="Road game. Dodge traffic by changing lanes."></canvas>
+        <div class="overlay" id="overlay">
+          <div class="overlay-panel">
+            <p class="overlay-kicker" id="overlay-kicker">Three lanes. One way out.</p>
+            <h2 id="overlay-title">Ready?</h2>
+            <p class="overlay-copy" id="overlay-copy">Dodge the traffic and stay on the road. You have three chances.</p>
+            <button class="start-button" id="start-button" type="button">Start your engine</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <div class="below-game">
+      <div class="instructions" aria-label="Controls">
+        <span><kbd class="key">←</kbd><kbd class="key">→</kbd> steer</span>
+        <span><kbd class="key">P</kbd> pause</span>
+        <span><kbd class="key">R</kbd> restart</span>
+      </div>
+      <div class="touch-controls" aria-label="Touch controls">
+        <button class="touch-button" id="left-button" type="button" aria-label="Steer left">←</button>
+        <button class="touch-button" id="right-button" type="button" aria-label="Steer right">→</button>
+      </div>
+    </div>
+    <footer class="footer"><span>Built for the open road</span><span><strong>Press enter</strong> to start</span></footer>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const scoreNode = document.getElementById('score');
+      const bestNode = document.getElementById('best');
+      const livesNode = document.getElementById('lives');
+      const overlay = document.getElementById('overlay');
+      const overlayKicker = document.getElementById('overlay-kicker');
+      const overlayTitle = document.getElementById('overlay-title');
+      const overlayCopy = document.getElementById('overlay-copy');
+      const startButton = document.getElementById('start-button');
+      const pauseButton = document.getElementById('pause-button');
+      const width = canvas.width;
+      const height = canvas.height;
+      const playerY = 448;
+      const trafficColors = ['#f3c647', '#4a9f91', '#e4e2d8', '#e86a4d', '#87a8d0'];
+      let state = 'ready';
+      let lane = 1;
+      let cars = [];
+      let score = 0;
+      let elapsed = 0;
+      let spawnClock = 0;
+      let roadOffset = 0;
+      let hitFlash = 0;
+      let invulnerable = 0;
+      let lastTime = 0;
+      let best = readBest();
+      let remainingLives = 3;
+
+      function readBest() {
+        try { return Number(localStorage.getItem('laneRunnerBest')) || 0; }
+        catch { return 0; }
+      }
+
+      function formatScore(value) { return String(Math.floor(value)).padStart(5, '0'); }
+      bestNode.textContent = formatScore(best);
+
+      function roadBounds(y) {
+        const depth = y / height;
+        return { center: width / 2, half: 85 + depth * 245 };
+      }
+
+      function laneX(laneIndex, y) {
+        const road = roadBounds(y);
+        return road.center + (laneIndex - 1) * (road.half * 0.64);
+      }
+
+      function drawBackground() {
+        const sky = ctx.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, '#a9c6ac');
+        sky.addColorStop(0.44, '#d8d3a9');
+        sky.addColorStop(0.45, '#728e68');
+        sky.addColorStop(1, '#526e58');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = '#f2cf69';
+        ctx.beginPath();
+        ctx.arc(735, 105, 38, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#819b79';
+        ctx.beginPath();
+        ctx.moveTo(0, 205); ctx.lineTo(95, 137); ctx.lineTo(180, 197); ctx.lineTo(275, 128);
+        ctx.lineTo(376, 208); ctx.lineTo(490, 146); ctx.lineTo(596, 204); ctx.lineTo(710, 133);
+        ctx.lineTo(900, 202); ctx.lineTo(900, 290); ctx.lineTo(0, 290); ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = '#a4aa7a';
+        for (let i = 0; i < 18; i++) {
+          const x = i * 54 - 8;
+          const buildingHeight = 23 + ((i * 31) % 42);
+          ctx.fillRect(x, 248 - buildingHeight, 31, buildingHeight);
+          ctx.fillStyle = '#d9cf83';
+          ctx.fillRect(x + 7, 257 - buildingHeight, 4, 5);
+          ctx.fillRect(x + 19, 257 - buildingHeight, 4, 5);
+          ctx.fillStyle = '#a4aa7a';
+        }
+      }
+
+      function drawRoad() {
+        ctx.fillStyle = '#58724e';
+        ctx.fillRect(0, 268, width, height - 268);
+        const top = roadBounds(0);
+        const bottom = roadBounds(height);
+        ctx.fillStyle = '#e4ddc4';
+        ctx.beginPath();
+        ctx.moveTo(top.center - top.half - 12, 0);
+        ctx.lineTo(top.center + top.half + 12, 0);
+        ctx.lineTo(bottom.center + bottom.half + 12, height);
+        ctx.lineTo(bottom.center - bottom.half - 12, height);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#343c39';
+        ctx.beginPath();
+        ctx.moveTo(top.center - top.half, 0);
+        ctx.lineTo(top.center + top.half, 0);
+        ctx.lineTo(bottom.center + bottom.half, height);
+        ctx.lineTo(bottom.center - bottom.half, height);
+        ctx.closePath(); ctx.fill();
+
+        for (let stripe = 0; stripe < 28; stripe++) {
+          const y = ((stripe * 36 + roadOffset) % (height + 40)) - 15;
+          const depth = y / height;
+          const half = 85 + depth * 245;
+          const stripeHeight = 3 + depth * 7;
+          ctx.fillStyle = stripe % 2 ? '#e8e0c5' : '#cf6547';
+          ctx.fillRect(width / 2 - half - 9, y, 7 + depth * 5, stripeHeight);
+          ctx.fillRect(width / 2 + half + 2, y, 7 + depth * 5, stripeHeight);
+        }
+
+        for (const divider of [-0.333, 0.333]) {
+          for (let stripe = 0; stripe < 12; stripe++) {
+            const y = ((stripe * 62 + roadOffset * 1.35) % (height + 70)) - 30;
+            const depth = y / height;
+            const half = 85 + depth * 245;
+            const x = width / 2 + divider * half * 1.92;
+            ctx.fillStyle = '#d6d4c1';
+            ctx.globalAlpha = 0.9;
+            ctx.fillRect(x, y, 2 + depth * 3, 24 + depth * 27);
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      function drawCar(x, y, color, player = false, scale = 1) {
+        const carWidth = (player ? 50 : 44) * scale;
+        const carHeight = (player ? 88 : 78) * scale;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = 'rgb(0 0 0 / 25%)';
+        ctx.beginPath();
+        ctx.ellipse(2, 9, carWidth * 0.7, carHeight * 0.47, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#202522';
+        ctx.fillRect(-25, -27, 7, 20); ctx.fillRect(18, -27, 7, 20);
+        ctx.fillRect(-25, 16, 7, 20); ctx.fillRect(18, 16, 7, 20);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(-20, -39); ctx.lineTo(20, -39); ctx.lineTo(24, -24);
+        ctx.lineTo(23, 33); ctx.lineTo(15, 43); ctx.lineTo(-15, 43);
+        ctx.lineTo(-23, 33); ctx.lineTo(-24, -24); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#b8d8ce';
+        ctx.beginPath();
+        ctx.moveTo(-14, -25); ctx.lineTo(14, -25); ctx.lineTo(17, -8);
+        ctx.lineTo(12, 4); ctx.lineTo(-12, 4); ctx.lineTo(-17, -8); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#34443f';
+        ctx.beginPath();
+        ctx.moveTo(-12, 9); ctx.lineTo(12, 9); ctx.lineTo(15, 25);
+        ctx.lineTo(-15, 25); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#fff0b3';
+        ctx.fillRect(-18, -36, 9, 4); ctx.fillRect(9, -36, 9, 4);
+        ctx.fillStyle = '#f15b43';
+        ctx.fillRect(-18, 34, 8, 4); ctx.fillRect(10, 34, 8, 4);
+        if (player) {
+          ctx.fillStyle = '#f3c647';
+          ctx.fillRect(-2, -33, 4, 70);
+        }
+        ctx.restore();
+      }
+
+      function drawScenery() {
+        for (let i = 0; i < 13; i++) {
+          const y = ((i * 58 + roadOffset * 0.72) % (height + 90)) - 35;
+          const depth = y / height;
+          const bounds = roadBounds(y);
+          const side = i % 2 === 0 ? -1 : 1;
+          const x = bounds.center + side * (bounds.half + 42 + depth * 23);
+          const size = 0.35 + depth * 0.78;
+          ctx.fillStyle = '#594b39';
+          ctx.fillRect(x - 3 * size, y - 7 * size, 6 * size, 17 * size);
+          ctx.fillStyle = i % 3 === 0 ? '#dd7650' : '#e7c85f';
+          ctx.beginPath();
+          ctx.arc(x, y - 12 * size, 10 * size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#f4edcf';
+          ctx.fillRect(x - 2 * size, y - 3 * size, 4 * size, 3 * size);
+        }
+      }
+
+      function spawnCar() {
+        const occupied = cars.filter(car => car.y < 115).map(car => car.lane);
+        const choices = [0, 1, 2].filter(candidate => !occupied.includes(candidate));
+        if (!choices.length) return;
+        const carLane = choices[Math.floor(Math.random() * choices.length)];
+        cars.push({ lane: carLane, y: -100, color: trafficColors[Math.floor(Math.random() * trafficColors.length)], speed: 205 + Math.random() * 35 });
+      }
+
+      function setOverlay(mode) {
+        overlay.classList.remove('hidden');
+        if (mode === 'ready') {
+          overlayKicker.textContent = 'Three lanes. One way out.';
+          overlayTitle.textContent = 'Ready?';
+          overlayCopy.textContent = 'Dodge the traffic and stay on the road. You have three chances.';
+          startButton.textContent = 'Start your engine';
+        } else if (mode === 'paused') {
+          overlayKicker.textContent = 'Catch your breath';
+          overlayTitle.textContent = 'Paused';
+          overlayCopy.textContent = `You have covered ${formatScore(score)} metres. Pick up where you left off.`;
+          startButton.textContent = 'Back on the road';
+        } else {
+          overlayKicker.textContent = 'That was a good run';
+          overlayTitle.textContent = 'Wiped out';
+          overlayCopy.textContent = `You made it ${formatScore(score)} metres. ${score > 0 ? 'One more run?' : 'The road is yours.'}`;
+          startButton.textContent = 'Race again';
+        }
+      }
+
+      function updateLives(count) {
+        const lives = [...livesNode.children];
+        lives.forEach((life, index) => life.classList.toggle('lost', index >= count));
+        livesNode.setAttribute('aria-label', `${count} ${count === 1 ? 'life' : 'lives'}`);
+      }
+
+      function startGame(reset = true) {
+        if (reset) {
+          score = 0;
+          elapsed = 0;
+          spawnClock = 0.45;
+          cars = [];
+          lane = 1;
+          invulnerable = 0;
+          hitFlash = 0;
+          remainingLives = 3;
+          updateLives(3);
+          scoreNode.textContent = formatScore(score);
+        }
+        state = 'running';
+        overlay.classList.add('hidden');
+        pauseButton.textContent = 'Ⅱ';
+        pauseButton.setAttribute('aria-label', 'Pause game');
+      }
+
+      function endGame() {
+        state = 'over';
+        best = Math.max(best, Math.floor(score));
+        bestNode.textContent = formatScore(best);
+        try { localStorage.setItem('laneRunnerBest', String(best)); } catch { /* Storage can be unavailable in private browsing. */ }
+        setOverlay('over');
+      }
+
+      function hit() {
+        if (invulnerable > 0) return;
+        remainingLives -= 1;
+        updateLives(remainingLives);
+        hitFlash = 0.28;
+        invulnerable = 1.15;
+        cars = cars.filter(car => !(car.lane === lane && Math.abs(car.y - playerY) < 95));
+        if (remainingLives <= 0) endGame();
+      }
+
+      function update(delta) {
+        if (state !== 'running') return;
+        elapsed += delta;
+        score += delta * (16 + Math.min(elapsed * 0.48, 27));
+        roadOffset = (roadOffset + delta * (210 + Math.min(elapsed * 4, 170))) % 500;
+        spawnClock -= delta;
+        hitFlash = Math.max(0, hitFlash - delta);
+        invulnerable = Math.max(0, invulnerable - delta);
+        if (spawnClock <= 0) {
+          spawnCar();
+          spawnClock = Math.max(0.48, 1.15 - elapsed * 0.008) + Math.random() * 0.32;
+        }
+        const speedFactor = 1 + Math.min(elapsed * 0.018, 0.85);
+        for (const car of cars) {
+          car.y += delta * car.speed * speedFactor;
+          if (car.lane === lane && Math.abs(car.y - playerY) < 56) hit();
+        }
+        cars = cars.filter(car => car.y < height + 100);
+        scoreNode.textContent = formatScore(score);
+      }
+
+      function render() {
+        drawBackground();
+        drawScenery();
+        drawRoad();
+        for (const car of cars.slice().sort((a, b) => a.y - b.y)) {
+          const scale = 0.58 + Math.max(0, car.y / height) * 0.44;
+          drawCar(laneX(car.lane, car.y), car.y, car.color, false, scale);
+        }
+        if (invulnerable <= 0 || Math.floor(performance.now() / 90) % 2 === 0) {
+          drawCar(laneX(lane, playerY), playerY, '#ef593e', true);
+        }
+        if (hitFlash > 0) {
+          ctx.fillStyle = `rgb(239 89 62 / ${hitFlash * 0.55})`;
+          ctx.fillRect(0, 0, width, height);
+        }
+        if (state === 'running') {
+          ctx.fillStyle = 'rgb(24 31 28 / 65%)';
+          ctx.fillRect(18, 18, 92, 27);
+          ctx.fillStyle = '#f5f2e9';
+          ctx.font = '11px "DM Mono", monospace';
+          ctx.fillText(`${Math.round(210 + Math.min(elapsed * 4, 170))} KM/H`, 28, 36);
+        }
+      }
+
+      function frame(time) {
+        const delta = Math.min((time - lastTime) / 1000 || 0, 0.05);
+        lastTime = time;
+        update(delta);
+        render();
+        requestAnimationFrame(frame);
+      }
+
+      function steer(direction) {
+        if (state === 'ready' || state === 'over') startGame();
+        if (state === 'running') lane = Math.max(0, Math.min(2, lane + direction));
+      }
+
+      function togglePause() {
+        if (state === 'running') {
+          state = 'paused';
+          setOverlay('paused');
+          pauseButton.textContent = '▶';
+          pauseButton.setAttribute('aria-label', 'Resume game');
+        } else if (state === 'paused') {
+          startGame(false);
+        }
+      }
+
+      startButton.addEventListener('click', () => startGame(state !== 'paused'));
+      pauseButton.addEventListener('click', togglePause);
+      document.getElementById('restart-button').addEventListener('click', () => startGame());
+      document.getElementById('left-button').addEventListener('pointerdown', () => steer(-1));
+      document.getElementById('right-button').addEventListener('pointerdown', () => steer(1));
+      document.addEventListener('keydown', event => {
+        if (['ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(event.key)) event.preventDefault();
+        if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') steer(-1);
+        if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') steer(1);
+        if (event.key.toLowerCase() === 'p' || event.key === ' ') togglePause();
+        if (event.key.toLowerCase() === 'r') startGame();
+        if (event.key === 'Enter' && state !== 'running') startGame(state !== 'paused');
+      });
+      window.addEventListener('blur', () => { if (state === 'running') togglePause(); });
+      updateLives(3);
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
